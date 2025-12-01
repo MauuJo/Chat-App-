@@ -1,0 +1,36 @@
+{
+  "name": "talk-a-tive",
+  "version": "1.0.0",
+  "description": "��#\u0000 \u0000C\u0000h\u0000a\u0000t\u0000-\u0000A\u0000p\u0000p\u0000-\u0000\r\u0000 \u0000",
+  "main": "server.js",
+  "scripts": {
+    "start": "nodemon backend/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MauuJo/Chat-App-.git"
+  },
+  "author": "Mansi Yadav",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MauuJo/Chat-App-/issues"
+  },
+  "homepage": "https://github.com/MauuJo/Chat-App-#readme",
+  "dependencies": {
+    "@chakra-ui/react": "^3.29.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "bcryptjs": "^3.0.3",
+    "colors": "^1.4.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "express-async-handler": "^1.2.0",
+    "framer-motion": "^12.23.24",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^9.0.0",
+    "nodemon": "^3.1.11",
+    "socket.io": "^4.8.1",
+    "uuid": "^13.0.0"
+  }
+}
