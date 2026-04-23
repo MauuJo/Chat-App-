@@ -1,16 +1,15 @@
-# Use a slim version of Python to keep the image small
 FROM python:3.12-slim
 
 WORKDIR /app
 
-# Copy requirements first to leverage Docker cache
-COPY requirements.txt .
+# Copy and install dependencies first (better layer caching)
+COPY ai-service/requirements.txt ./requirements.txt
+
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the code
-COPY . .
+# Copy the ai-service source code
+COPY ai-service/ ./
 
 EXPOSE 8000
 
-# Start FastAPI using uvicorn
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

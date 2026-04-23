@@ -2,13 +2,14 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Install dependencies
+# Copy root-level package files (this is where package.json lives)
 COPY package*.json ./
+
 RUN npm install
 
-# Copy source code
-COPY . .
+# Copy the backend source code
+COPY backend/ ./backend/
 
 EXPOSE 5000
 
-CMD ["npm", "start"]
+CMD ["node", "backend/server.js"]

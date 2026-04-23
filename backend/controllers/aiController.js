@@ -24,7 +24,7 @@ const generateAIResponse = asyncHandler(async (req, res) => {
 
     // 2. Forward the request to the Python FastAPI Microservice
     // (Using native fetch, available in Node 18+)
-    const aiResponse = await fetch("http://127.0.0.1:8000/api/ai-command", {
+    const aiResponse = await fetch(`${process.env.AI_SERVICE_URL}/api/ai-command`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
