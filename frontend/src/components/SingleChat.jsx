@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { ChatState } from "../Context/ChatProvider";
 import {
   Box,
@@ -27,13 +27,16 @@ const ENDPOINT = "http://localhost:5000"; // Adjust if deploying
 var socket, selectedChatCompare;
 
 const SingleChat = ({ fetchAgain, setFetchAgain }) => {
+  // MOVED INSIDE: All hooks must reside inside the component body
+  const [isAILoading, setIsAILoading] = useState(false); 
+  
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [socketConnected, setSocketConnected] = useState(false);
   const [typing, setTyping] = useState(false);
   const [istyping, setIsTyping] = useState(false);
-
+  const typingTimeoutRef = useRef(null);
   // Snackbar State
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
@@ -90,28 +93,65 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const sendMessage = async (event) => {
     if (event.key === "Enter" && newMessage) {
       socket.emit("stop typing", selectedChat._id);
+
+      const messageText = newMessage;
+      const isAICommand = messageText.trim().toLowerCase().startsWith("@ai");
+      setNewMessage(""); // Clear input instantly
+
+      const config = {
+        headers: {
+          "Content-type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+      };
+
       try {
-        const config = {
-          headers: {
-            "Content-type": "application/json",
-            Authorization: `Bearer ${user.token}`,
-          },
-        };
-        console.log("Sending Message:", newMessage);
-        console.log("Chat ID:", selectedChat._id);
-        setNewMessage("");
-        const { data } = await axios.post(
+        // STEP 1: ALWAYS send the user's message first
+        const { data: userMessage } = await axios.post(
           "/api/message",
-          {
-            content: newMessage,
-            chatId: selectedChat._id, // Ensure ._id is sent
-          },
+          { content: messageText, chatId: selectedChat._id },
           config
         );
-        socket.emit("new message", data);
-        setMessages([...messages, data]);
+        
+        socket.emit("new message", userMessage);
+        setMessages((prevMessages) => [...prevMessages, userMessage]);
+
+        // STEP 2: Trigger AI if requested
+        if (isAICommand) {
+          setIsAILoading(true); // Turn on the loader
+
+          try {
+            // Ask FastAPI for the response
+            const { data: aiResponse } = await axios.post(
+              "/api/ai",
+              { message: messageText, chatId: selectedChat._id },
+              config
+            );
+
+            // Save the AI's answer to MongoDB
+            const { data: finalMessage } = await axios.post(
+              "/api/message",
+              {
+                content: `🤖 AI (${aiResponse.intent}):\n${aiResponse.reply}`,
+                chatId: selectedChat._id,
+              },
+              config
+            );
+
+            // Broadcast and display the AI's answer
+            socket.emit("new message", finalMessage);
+            setMessages((prevMessages) => [...prevMessages, finalMessage]);
+          } catch (aiError) {
+            console.error("AI Service Error:", aiError);
+            showToast("AI is currently unavailable.", "error");
+          } finally {
+            setIsAILoading(false); // Ensure loader ALWAYS turns off
+          }
+        }
       } catch (error) {
-        showToast("Failed to send the Message", "error");
+        console.error("Message Save Error:", error);
+        setIsAILoading(false);
+        showToast("Failed to send message", "error");
       }
     }
   };
@@ -156,16 +196,17 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       setTyping(true);
       socket.emit("typing", selectedChat._id);
     }
-    let lastTypingTime = new Date().getTime();
-    var timerLength = 3000;
-    setTimeout(() => {
-      var timeNow = new Date().getTime();
-      var timeDiff = timeNow - lastTypingTime;
-      if (timeDiff >= timerLength && typing) {
-        socket.emit("stop typing", selectedChat._id);
-        setTyping(false);
-      }
-    }, timerLength);
+
+    // 1. Clear the previous timer every time a new key is pressed
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // 2. Start a fresh 3-second timer
+    typingTimeoutRef.current = setTimeout(() => {
+      socket.emit("stop typing", selectedChat._id);
+      setTyping(false);
+    }, 3000);
   };
 
   return (
@@ -234,45 +275,82 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                 }}
               />
             ) : (
-              <div className="messages">
-                <ScrollableChat messages={messages} />
-              </div>
-            )}
-
-            <FormControl
-              onKeyDown={sendMessage}
-              required
-              sx={{ mt: 3 }}
-            >
-              {istyping && (
-                <div>
-                  <Lottie
-                    options={defaultOptions}
-                    width={70}
-                    style={{ marginBottom: 15, marginLeft: 0 }}
-                  />
+              <>
+                {/* 1. The Scrollable Chat Area & Typing Indicator */}
+                <div className="messages" style={{ display: "flex", flexDirection: "column", overflowY: "auto", marginBottom: "10px" }}>
+                  <ScrollableChat messages={messages} />
+                  
+                  {/* NEW POLISHED TYPING INDICATOR */}
+                  {istyping && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '5px', marginBottom: '5px' }}>
+                      <div style={{
+                        backgroundColor: "#E2E8F0",
+                        borderRadius: "20px",
+                        padding: "5px 15px",
+                        width: "60px",
+                        height: "35px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}>
+                        <Lottie
+                        options={defaultOptions}
+                        width={35} 
+                        style={{ 
+                          marginBottom: 0, 
+                          marginLeft: 0 // <-- This is the magic CSS trick!
+                        }}
+                      />
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-              <TextField
-                variant="filled"
-                placeholder="Enter a message.."
-                value={newMessage}
-                onChange={typingHandler}
-                fullWidth
-                sx={{
-                  bgcolor: "#E0E0E0",
-                  "& .MuiFilledInput-root": {
-                    bgcolor: "#E0E0E0",
-                    "&:hover": {
-                      bgcolor: "#d5d5d5",
-                    },
-                    "&.Mui-focused": {
-                      bgcolor: "#d5d5d5",
-                    },
-                  },
-                }}
-              />
-            </FormControl>
+
+                {/* 2. THE LOADING STATE - Pinned right above the input box */}
+                {isAILoading && (
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+                    <span style={{ 
+                      backgroundColor: "#E2E8F0", 
+                      padding: "6px 14px", 
+                      borderRadius: "15px", 
+                      fontSize: "12px",
+                      color: "#4A5568",
+                      fontStyle: "italic",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
+                    }}>
+                      🤖 Generating response...
+                    </span>
+                  </div>
+                )}
+
+                {/* 3. The Input Field (Cleaned up!) */}
+                <FormControl
+                  onKeyDown={sendMessage}
+                  required
+                  sx={{ mt: 3 }}
+                >
+                  <TextField
+                    variant="filled"
+                    placeholder="Enter a message.."
+                    value={newMessage}
+                    onChange={typingHandler}
+                    fullWidth
+                    sx={{
+                      bgcolor: "#E0E0E0",
+                      "& .MuiFilledInput-root": {
+                        bgcolor: "#E0E0E0",
+                        "&:hover": {
+                          bgcolor: "#d5d5d5",
+                        },
+                        "&.Mui-focused": {
+                          bgcolor: "#d5d5d5",
+                        },
+                      },
+                    }}
+                  />
+                </FormControl>
+              </>
+            )}
           </Box>
         </>
       ) : (
@@ -313,4 +391,4 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   );
 };
 
-export default SingleChat;
+export default SingleChat; // Make sure you don't duplicate this line if it's already at the bottom of your file!

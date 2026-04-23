@@ -2,6 +2,7 @@ const asyncHandler = require("express-async-handler");
 const User = require("../models/userModel");
 const generateToken = require("../config/generateToken");
 
+
 //@description     Get or Search all users
 //@route           GET /api/user?search=
 //@access          Public
@@ -82,4 +83,49 @@ const authUser = asyncHandler(async (req, res) => {
   }
 });
 
-module.exports = { allUsers, registerUser, authUser };
+const deleteUser = asyncHandler(async (req, res) => {
+  // req.user._id is provided by your 'protect' auth middleware
+  const userId = req.user._id;
+
+  const user = await User.findById(userId);
+
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
+
+  // Delete the user from the database
+  await User.findByIdAndDelete(userId);
+
+  // Optional but recommended: You could also delete their messages here, 
+  // or leave them so chat history isn't ruined for other people.
+  
+  res.status(200).json({ message: "User account deleted successfully" });
+});
+
+const updateUserProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+
+  if (user) {
+    user.name = req.body.name || user.name;
+    user.pic = req.body.pic || user.pic;
+    
+    // Save the updated user to MongoDB
+    const updatedUser = await user.save();
+
+    res.json({
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      pic: updatedUser.pic,
+      token: req.headers.authorization.split(" ")[1], // keep the same token
+    });
+  } else {
+    res.status(404);
+    throw new Error("User Not Found");
+  }
+});
+
+// Don't forget to add it to your exports!
+module.exports = { registerUser, authUser, allUsers, deleteUser, updateUserProfile };
+
