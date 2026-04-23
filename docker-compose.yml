@@ -29,6 +29,7 @@ services:
     environment:
       # Override the AI service URL so it resolves inside Docker network
       - AI_SERVICE_URL=http://ai-service:8000
+      - MONGO_URI=${MONGO_URI}
 
   frontend:
     build:

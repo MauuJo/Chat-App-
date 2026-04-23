@@ -3,14 +3,14 @@ FROM node:22-alpine AS build
 
 WORKDIR /app
 
-# We are already inside the frontend folder, so we copy locally
-COPY package*.json ./
+# Copy frontend package files from the frontend subfolder
+COPY frontend/package*.json ./
 
 # Clean install to avoid dependency conflicts
 RUN npm install --legacy-peer-deps
 
 # Copy the rest of the frontend source code
-COPY . .
+COPY frontend/ .
 
 # Run the build command
 RUN npm run build
@@ -21,8 +21,8 @@ FROM nginx:stable-alpine
 # Copy the build output from the previous stage
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# IMPORTANT: Ensure you actually have a file named 'nginx.conf' in your frontend folder
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy nginx config from the frontend subfolder
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 

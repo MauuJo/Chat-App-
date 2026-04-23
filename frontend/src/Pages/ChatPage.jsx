@@ -3,9 +3,9 @@ import { ChatState } from "../Context/ChatProvider";
 import { Box } from "@mui/material";
 
 // Import the components we converted earlier
-import SideDrawer from "../components/miscellaneous/SideDrawer";
+import SideDrawer from "../components/Miscellaneous/SideDrawer";
 import MyChats from "../components/MyChats";
-import ChatBox from "../components/ChatBox";
+import ChatBox from "../components/Chatbox";
 
 const ChatPage = () => {
   const { user } = ChatState();
