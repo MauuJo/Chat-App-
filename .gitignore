@@ -44,3 +44,5 @@ pip-delete-this-directory.txt
 /backend/uploads/
 # Ignore any specific local data for the AI model
 /ai-service/data/
+
+k8s/secrets.yaml

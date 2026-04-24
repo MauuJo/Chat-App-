@@ -26,10 +26,13 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 };
 
 userSchema.pre("save", async function (next) {
-  if (!this.isModified) {
-    next();
+  // 1. Check if the password field specifically was modified
+  // 2. Use 'return' to completely exit the function if it wasn't
+  if (!this.isModified("password")) {
+    return next();
   }
 
+  // Only runs if the password was actually changed or newly created
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });

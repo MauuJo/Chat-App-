@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: mauujo/chatapp-backend:latest
+          image: mauujo/chatapp-backend:v2
           imagePullPolicy: Always
           ports:
             - containerPort: 5000
