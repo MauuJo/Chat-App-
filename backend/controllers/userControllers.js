@@ -1,6 +1,8 @@
 const asyncHandler = require("express-async-handler");
 const User = require("../models/userModel");
 const generateToken = require("../config/generateToken");
+const Message = require("../models/messageModel");
+const Chat = require("../models/chatModel");
 
 
 //@description     Get or Search all users
@@ -84,7 +86,6 @@ const authUser = asyncHandler(async (req, res) => {
 });
 
 const deleteUser = asyncHandler(async (req, res) => {
-  // req.user._id is provided by your 'protect' auth middleware
   const userId = req.user._id;
 
   const user = await User.findById(userId);
@@ -94,14 +95,29 @@ const deleteUser = asyncHandler(async (req, res) => {
     throw new Error("User not found");
   }
 
-  // Delete the user from the database
+  // Remove user from all group chats they belong to
+  await Chat.updateMany(
+    { users: userId },
+    { $pull: { users: userId } }
+  );
+
+  // Delete group chats where they are the only member or admin with no members
+  await Chat.deleteMany({
+    $or: [
+      { users: { $size: 0 } },
+      { users: { $size: 1 } },
+    ]
+  });
+
+  // Delete all their messages
+  await Message.deleteMany({ sender: userId });
+
+  // Delete the user
   await User.findByIdAndDelete(userId);
 
-  // Optional but recommended: You could also delete their messages here, 
-  // or leave them so chat history isn't ruined for other people.
-  
   res.status(200).json({ message: "User account deleted successfully" });
 });
+
 
 const updateUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);

@@ -112,11 +112,10 @@ const MyChats = ({ fetchAgain }) => {
         }}
       >
         {chats ? (
-          <Stack 
-            spacing={2} 
-            sx={{ overflowY: "auto" }} // Allow scrolling inside the stack
-          >
-            {chats.map((chat) => (
+        <Stack spacing={2} sx={{ overflowY: "auto" }}>
+          {chats
+            .filter(chat => chat.users && chat.users.every(u => u !== null))
+            .map((chat) => (
               <Box
                 onClick={() => setSelectedChat(chat)}
                 key={chat._id}
@@ -137,10 +136,10 @@ const MyChats = ({ fetchAgain }) => {
                     ? getSender(loggedUser, chat.users)
                     : chat.chatName}
                 </Typography>
-                
+
                 {chat.latestMessage && (
                   <Typography variant="caption" display="block">
-                    <b>{chat.latestMessage.sender.name} : </b>
+                    <b>{chat.latestMessage.sender?.name || "Deleted User"} : </b>
                     {chat.latestMessage.content.length > 50
                       ? chat.latestMessage.content.substring(0, 51) + "..."
                       : chat.latestMessage.content}
@@ -148,10 +147,10 @@ const MyChats = ({ fetchAgain }) => {
                 )}
               </Box>
             ))}
-          </Stack>
-        ) : (
-          <ChatLoading />
-        )}
+        </Stack>
+      ) : (
+        <ChatLoading />
+      )}
       </Box>
 
       {/* Snackbar Component */}

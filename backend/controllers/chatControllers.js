@@ -66,6 +66,13 @@ const fetchChats = asyncHandler(async (req, res) => {
           path: "latestMessage.sender",
           select: "name pic email",
         });
+
+        // Filter out null users from each chat
+        results = results.map(chat => ({
+          ...chat.toObject(),
+          users: chat.users.filter(u => u !== null)
+        }));
+
         res.status(200).send(results);
       });
   } catch (error) {

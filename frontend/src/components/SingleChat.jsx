@@ -23,7 +23,8 @@ import { getSender, getSenderFull } from "../config/ChatLogics";
 import animationData from "../animations/typing.json";
 import "./styles.css";
 
-const ENDPOINT = "http://localhost:5000"; // Adjust if deploying
+// const ENDPOINT = "http://localhost:5000"; // Adjust if deploying
+const ENDPOINT = window.location.origin; // Dynamically use the same origin as the frontend
 var socket, selectedChatCompare;
 
 const SingleChat = ({ fetchAgain, setFetchAgain }) => {
@@ -182,7 +183,10 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
           setFetchAgain(!fetchAgain);
         }
       } else {
-        setMessages([...messages, newMessageRecieved]);
+        // Only add message if sender still exists
+        if (newMessageRecieved?.sender?._id) {
+          setMessages([...messages, newMessageRecieved]);
+        }
       }
     });
   });
